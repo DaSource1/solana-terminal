@@ -1,288 +1,478 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SOLANA RECOVERY TERMINAL</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+<meta charset="UTF-8">
+<title>Phantom Breach — Wallet Recovery</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Roboto+Mono:wght@300;700&display=swap');
 
-    :root {
-      --bg: #000;
-      --text: #0f0;
-      --accent: #0f9;
-      --error: #f33;
-      --glitch: #0ff;
-    }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'VT323', monospace;
-      overflow: hidden;
-      height: 100vh;
-      position: relative;
-    }
+  :root {
+    --bg: #0a0a0a;
+    --red: #ff0033;
+    --purple: #aa00ff;
+    --text: #e0e0e0;
+    --dark: #111;
+  }
 
-    canvas { position: absolute; top:0; left:0; z-index:1; opacity:0.15; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Roboto Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
 
-    .terminal {
-      position: relative;
-      z-index: 10;
-      max-width: 720px;
-      margin: 2rem auto;
-      padding: 1.5rem;
-      background: rgba(0,0,0,0.8);
-      border: 2px solid var(--text);
-      border-radius: 4px;
-      box-shadow: 0 0 20px var(--text), inset 0 0 10px rgba(0,255,0,0.2);
-      animation: flicker 3s infinite alternate;
-    }
-    @keyframes flicker { 0%,100% { opacity:1; } 50% { opacity:0.97; } }
+  /* SCANLINES */
+  body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.15),
+      rgba(0,0,0,0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 999;
+    animation: scan 8s linear infinite;
+  }
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
 
-    h1 {
-      text-align: center;
-      font-size: 2.2rem;
-      letter-spacing: 3px;
-      margin-bottom: 0.5rem;
-      text-shadow: 0 0 5px var(--glitch);
-      animation: glitch 2s infinite;
-    }
-    @keyframes glitch {
-      0% { text-shadow: 2px 0 #f00, -2px 0 #0ff; }
-      10% { text-shadow: -2px 0 #f00, 2px 0 #0ff; }
-      20% { text-shadow: 0 0 10px var(--glitch); }
-      100% { text-shadow: 0 0 5px var(--glitch); }
-    }
+  /* GHOST ASCII — SUBTLE, DRIFTING */
+  #ghost-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    font-size: 1.1vw;
+    line-height: 1.05;
+    white-space: pre;
+    color: var(--red);
+    animation: ghostDrift 60s linear infinite;
+    filter: blur(0.5px);
+  }
+  @keyframes ghostDrift {
+    0%   { transform: translate(0,0) rotate(0deg); }
+    100% { transform: translate(-8vw, -8vh) rotate(1.5deg); }
+  }
 
-    #timer {
-      text-align: center;
-      font-size: 2.5rem;
-      margin: 1rem 0;
-      color: #0f9;
-      text-shadow: 0 0 10px;
-      animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+  /* TERMINAL */
+  .terminal {
+    width: 92vw; max-width: 960px;
+    border: 1px solid var(--red);
+    border-radius: 12px;
+    background: rgba(10,10,10,0.97);
+    box-shadow: 
+      0 0 40px rgba(255,0,51,0.4),
+      inset 0 0 20px rgba(0,0,0,0.8);
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(8px);
+  }
 
-    .seed-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem;
-      margin: 1.5rem 0;
-      z-index: 20;
-    }
-    .seed-input {
-      background: #000;
-      border: 1px solid #0a0;
-      color: var(--text);
-      font-family: 'VT323', monospace;
-      font-size: 1.1rem;
-      padding: 0.5rem;
-      text-align: center;
-      caret-color: var(--accent);
-      transition: all 0.2s;
-      z-index: 30;
-    }
-    .seed-input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 8px var(--accent);
-      background: #001a00;
-    }
-    .seed-input.correct { border-color: #0f0; background: #002200; box-shadow: 0 0 12px #0f0; }
-    .seed-input.wrong   { border-color: var(--error); background: #200000; box-shadow: 0 0 12px var(--error); animation: shake 0.3s; }
-    @keyframes shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-4px); } 75% { transform:translateX(4px); } }
+  .header {
+    background: linear-gradient(180deg, #1a001a, #0f000f);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--purple);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+  .title {
+    color: var(--red);
+    text-shadow: 0 0 10px var(--red);
+    font-size: 1.1rem;
+  }
+  .timer {
+    color: #ff3366;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-shadow: 0 0 8px var(--red);
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform: scale(1); }
+    50% { opacity:0.7; transform: scale(1.02); }
+  }
 
-    #message {
-      text-align: center;
-      min-height: 1.5rem;
-      font-size: 1.1rem;
-      margin-top: 1rem;
-    }
+  .body { padding: 30px; }
 
-    #result {
-      display: none;
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-    #balance {
-      font-size: 2rem;
-      color: var(--accent);
-      text-shadow: 0 0 10px;
-    }
-    .sol { color: #0f9; }
-    .usd { color: #99f; }
+  /* LOGIN */
+  #login-screen {
+    text-align: center;
+  }
+  .logo {
+    width: 80px; height: 80px;
+    margin: 0 auto 20px;
+    background: var(--red);
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+    animation: spin 20s linear infinite;
+    box-shadow: 0 0 20px var(--red);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    body::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
-      pointer-events: none;
-      z-index: 5;
-      animation: crt 0.1s infinite;
-    }
-    @keyframes crt { 0% { opacity: 0.8; } 100% { opacity: 1; } }
-  </style>
+  .input-group {
+    margin: 20px 0;
+    position: relative;
+  }
+  label {
+    position: absolute;
+    top: -10px; left: 16px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 0.8rem;
+    color: var(--purple);
+  }
+  input {
+    width: 100%;
+    background: var(--dark);
+    border: 1px solid var(--purple);
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-family: inherit;
+    transition: 0.3s;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--red);
+    box-shadow: 0 0 15px rgba(255,0,51,0.3);
+  }
+  button {
+    width: 100%;
+    background: linear-gradient(45deg, var(--red), #ff3366);
+    color: #000;
+    border: none;
+    padding: 16px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: 0.3s;
+    box-shadow: 0 4px 15px rgba(255,0,51,0.4);
+  }
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255,0,51,0.6);
+  }
+
+  /* BREACH */
+  #breach-screen {
+    display: none;
+    color: var(--text);
+    height: 70vh;
+    overflow-y: auto;
+    font-family: 'Roboto Mono', monospace;
+    line-height: 1.6;
+  }
+  #typewriter {
+    white-space: pre-wrap;
+  }
+  .cursor {
+    animation: blink 0.8s infinite;
+  }
+  @keyframes blink { 50% { opacity:0; } }
+
+  /* WALLET */
+  #wallet-screen {
+    display: none;
+  }
+  .seed-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 30px 0;
+  }
+  @media (max-width: 600px) {
+    .seed-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .seed-input {
+    background: var(--dark);
+    border: 1px solid #333;
+    color: var(--text);
+    padding: 12px;
+    text-align: center;
+    border-radius: 6px;
+    font-family: inherit;
+    transition: 0.3s;
+  }
+  .seed-input:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 10px rgba(170,0,255,0.3);
+  }
+  .seed-input.correct {
+    border-color: var(--red);
+    background: rgba(255,0,51,0.1);
+    color: var(--red);
+    animation: success 0.5s;
+  }
+  .seed-input.error {
+    border-color: #ff0066;
+    animation: errorShake 0.4s;
+    background: rgba(255,0,102,0.1);
+  }
+  @keyframes success { 0% { transform: scale(0.9); } 100% { transform: scale(1); } }
+  @keyframes errorShake {
+    0%,100% { transform:translateX(0); }
+    25% { transform:translateX(-6px); }
+    75% { transform:translateX(6px); }
+  }
+
+  .balance {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+  .sol { color: var(--red); text-shadow: 0 0 10px var(--red); }
+  .usd { color: var(--purple); font-size: 1.2rem; margin-top: 8px; }
+
+  .error-msg {
+    color: #ff3366;
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+    animation: fadeIn 0.5s;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+</style>
 </head>
 <body>
 
-  <canvas id="matrix"></canvas>
+<!-- BACKGROUND MUSIC -->
+<audio id="bg-music" loop preload="auto">
+  <source src="YOUR_TRACK_URL_HERE" type="audio/mpeg">
+</audio>
 
-  <div class="terminal">
-    <h1>» SOLANA RECOVERY TERMINAL «</h1>
-    <div id="timer">60:00</div>
+<!-- GHOST ASCII -->
+<pre id="ghost-bg">
+                     .-.
+                    /  (
+                   |   |
+                   |   |
+                   |   |
+                   |   |
+                  /     \
+                 | () () |
+                  \  ^  /
+                   |||||
+                   |||||
+                  /     \
+                 |       |
+                  \     /
+                   |||||
+                   |||||
+                  /     \
+                 |       |
+                  \     /
+                   |||||
+                   |||||
+</pre>
 
-    <div class="seed-grid" id="grid"></div>
-
-    <div id="message"></div>
-
-    <div id="result">
-      <div id="balance">
-        <span class="sol">10,000.00</span> SOL<br>
-        <span class="usd" id="usdValue">—</span>
-      </div>
-      <div style="margin-top:1rem; font-size:1.2rem; color:#0f9;">
-        WALLET RESTORED // FUNDS SECURE
-      </div>
-    </div>
+<div class="terminal">
+  <div class="header">
+    <div class="title">PHANTOM BREACH v2</div>
+    <div class="timer" id="timer">T-60:00</div>
   </div>
 
-  <script>
-    const CORRECT = ["abandon","cabbage","able","zoo","dawn","gadget","honey","twelve","icon","jazz","kite","leopard"];
-    const TOTAL_SECONDS = 60 * 60;
-    const grid = document.getElementById('grid');
-    const timerEl = document.getElementById('timer');
-    const msg = document.getElementById('message');
-    const result = document.getElementById('result');
-    const usdEl = document.getElementById('usdValue');
-    const inputs = [];
+  <div class="body">
 
-    // CREATE 12 INPUTS
-    for (let i = 0; i < 12; i++) {
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.className = 'seed-input';
-      inp.dataset.idx = i;
-      inp.autocomplete = 'off';
-      inp.spellcheck = false;
-      inp.maxLength = 20;
-      grid.appendChild(inp);
-      inputs.push(inp);
+    <!-- LOGIN -->
+    <div id="login-screen">
+      <div class="logo"></div>
+      <h2 style="color:var(--red); margin-bottom:20px; font-family:'Orbitron';">SYSTEM COMPROMISED</h2>
+      <div class="input-group">
+        <label>USERNAME</label>
+        <input type="text" value="PhantomSol_7" readonly>
+      </div>
+      <div class="input-group">
+        <label>PASSWORD</label>
+        <input type="password" id="password" placeholder="Enter breach code">
+      </div>
+      <button id="login-btn">EXECUTE BREACH</button>
+    </div>
 
-      // Only move on SPACE or ENTER
-      inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          if (i < 11) inputs[i+1].focus();
-        } else if (e.key === 'Backspace' && !inp.value && i > 0) {
-          e.preventDefault();
-          inputs[i-1].focus();
-        }
-      });
+    <!-- BREACH -->
+    <div id="breach-screen">
+      <pre id="typewriter"></pre><span class="cursor">_</span>
+    </div>
 
-      inp.addEventListener('input', () => {
-        let val = inp.value.trim().toLowerCase();
-        inp.value = val;
-        validate();
-      });
+    <!-- WALLET -->
+    <div id="wallet-screen">
+      <h2 style="text-align:center; color:var(--purple); margin-bottom:10px; font-family:'Orbitron';">WALLET RECOVERY</h2>
+      <p style="text-align:center; font-size:0.9rem; opacity:0.8;">Enter 12-word seed in order to halt auto-sweep</p>
+
+      <div class="seed-grid" id="seed-grid"></div>
+      <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+      <div class="balance" id="balance" style="display:none;">
+        <div>Balance: <span class="sol">10,000.00 SOL</span></div>
+        <div class="usd">$1,000,000.00 USD</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CORRECT_SEED = ["abandon","cabbage","able","zoo","dawn","gadget","honey","twelve","icon","jazz","kite","leopard"];
+const TYPEWRITER_TEXT = `
+[BREACH PROTOCOL ENGAGED]
+> Connecting to Solana RPC... OK
+> Spoofing validator node... OK
+> Injecting ghost keypair... OK
+> Scanning mempool for seed traces... 6/12 DETECTED
+> 
+> [AUTO-SWEEP IN PROGRESS]
+> 
+> ┌────────────────────────────────────────────────┐
+> │  PHANTOM WALLET — RECOVERY MODE ACTIVATED      │
+> └────────────────────────────────────────────────┘
+> 
+> Enter seed phrase to override burn sequence.
+> 
+> [GHOST SIGNATURE DETECTED IN BACKGROUND]
+> 
+> ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+> ⣿⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⣿
+> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
+> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
+> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
+> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
+> ⣿⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⣿
+> ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+> 
+> [AWAITING SEED INPUT]
+> 
+> `;
+
+let timerInterval, typeInterval;
+let minutes = 60, seconds = 0;
+const bgMusic = document.getElementById('bg-music');
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds--;
+    if (seconds < 0) { seconds = 59; minutes--; }
+    if (minutes < 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">BURNED</span>';
+      bgMusic.pause();
+      showError('AUTO-SWEEP COMPLETE — FUNDS LOST TO BURN ADDRESS');
+    } else {
+      const m = minutes.toString().padStart(2,'0');
+      const s = seconds.toString().padStart(2,'0');
+      document.getElementById('timer').innerHTML = `T-${m}:${s}`;
     }
+  }, 1000);
+}
 
-    // TIMER
-    let end = Date.now() + TOTAL_SECONDS * 1000;
-    function updateTimer() {
-      const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
-      const m = String(Math.floor(left / 60)).padStart(2,'0');
-      const s = String(left % 60).padStart(2,'0');
-      timerEl.textContent = `${m}:${s}`;
-      if (left <= 0) {
-        msg.textContent = '>> FUNDS BURNED. TERMINAL LOCKED.';
-        msg.style.color = 'var(--error)';
-        inputs.forEach(i => i.disabled = true);
-      } else {
-        requestAnimationFrame(updateTimer);
-      }
+document.getElementById('login-btn').addEventListener('click', () => {
+  const pass = document.getElementById('password').value.trim().toLowerCase();
+  if (pass === 'move') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('breach-screen').style.display = 'block';
+    startTypewriter();
+    startTimer();
+    document.body.addEventListener('click', () => {
+      bgMusic.play().catch(() => {});
+      bgMusic.volume = 0.35;
+    }, { once: true });
+  } else {
+    document.getElementById('password').style.borderColor = '#ff0066';
+    setTimeout(() => document.getElementById('password').style.borderColor = '#333', 600);
+  }
+});
+
+function startTypewriter() {
+  const el = document.getElementById('typewriter');
+  let i = 0;
+  typeInterval = setInterval(() => {
+    if (i < TYPEWRITER_TEXT.length) {
+      el.textContent += TYPEWRITER_TEXT[i];
+      i++;
+      el.parentNode.scrollTop = el.parentNode.scrollHeight;
+    } else {
+      clearInterval(typeInterval);
+      setTimeout(() => {
+        document.getElementById('breach-screen').style.display = 'none';
+        document.getElementById('wallet-screen').style.display = 'block';
+        initSeedGrid();
+      }, 1000);
     }
-    updateTimer();
+  }, 28);
+}
 
-    // VALIDATE
-    function validate() {
-      let filled = 0, correct = true;
-      inputs.forEach((inp, i) => {
-        const val = inp.value.trim().toLowerCase();
-        inp.classList.remove('correct','wrong');
-        if (!val) return;
-        filled++;
-        if (val === CORRECT[i]) {
-          inp.classList.add('correct');
-        } else {
-          inp.classList.add('wrong');
-          correct = false;
-        }
-      });
+function initSeedGrid() {
+  const grid = document.getElementById('seed-grid');
+  for (let i = 0; i < 12; i++) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'seed-input';
+    input.placeholder = `${i+1}`;
+    input.dataset.index = i;
+    input.addEventListener('input', checkSeed);
+    grid.appendChild(input);
+  }
+}
 
-      if (filled === 12) {
-        if (correct) unlock();
-        else {
-          msg.textContent = '>> INVALID SEED. ACCESS DENIED.';
-          msg.style.color = 'var(--error)';
-        }
-      } else {
-        msg.textContent = '';
-      }
+function checkSeed() {
+  const inputs = document.querySelectorAll('.seed-input');
+  let allCorrect = true;
+  let filled = 0;
+
+  inputs.forEach((inp, idx) => {
+    const val = inp.value.trim().toLowerCase();
+    if (val === '') return;
+    filled++;
+
+    if (val === CORRECT_SEED[idx]) {
+      inp.classList.add('correct');
+      inp.classList.remove('error');
+    } else {
+      inp.classList.add('error');
+      inp.classList.remove('correct');
+      allCorrect = false;
     }
+  });
 
-    // UNLOCK
-    async function unlock() {
-      inputs.forEach(i => i.disabled = true);
-      msg.textContent = '>> SEED ACCEPTED. RESTORING WALLET...';
-      msg.style.color = 'var(--accent)';
-
-      try {
-        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-        const d = await r.json();
-        const usd = (10000 * d.solana.usd).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        usdEl.textContent = `$${usd} USD`;
-      } catch {
-        usdEl.textContent = '(price error)';
-      }
-
-      result.style.display = 'block';
+  const errorMsg = document.getElementById('error-msg');
+  if (filled === 12) {
+    if (allCorrect) {
+      document.getElementById('balance').style.display = 'block';
+      errorMsg.style.display = 'none';
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">SECURED</span>';
+      bgMusic.pause();
+    } else {
+      errorMsg.textContent = 'CHECKSUM FAILED — SEED REJECTED';
+      errorMsg.style.display = 'block';
     }
+  } else {
+    errorMsg.style.display = 'none';
+  }
+}
 
-    // MATRIX RAIN
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
-    const fontSize = 14;
-    const cols = Math.floor(canvas.width / fontSize);
-    const drops = Array(cols).fill(1);
-
-    function draw() {
-      ctx.fillStyle = 'rgba(0,0,0,0.05)';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = '#0f0';
-      ctx.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-        ctx.fillText(text, x, y);
-        if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
-        drops[i]++;
-      }
-    }
-    setInterval(draw, 35);
-
-    window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    });
-  </script>
+function showError(msg) {
+  const err = document.createElement('div');
+  err.className = 'error-msg';
+  err.textContent = msg;
+  document.querySelector('#wallet-screen').appendChild(err);
+}
+</script>
 </body>
 </html>
