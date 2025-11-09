@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -88,6 +88,7 @@
 
   <div class="body">
 
+    <!-- LOGIN -->
     <div id="login-screen">
       <div class="logo"></div>
       <h2 style="color:var(--red);margin-bottom:20px;font-family:'Orbitron';">SYSTEM COMPROMISED</h2>
@@ -102,10 +103,12 @@
       <button id="login-btn">EXECUTE BREACH</button>
     </div>
 
+    <!-- BREACH -->
     <div id="breach-screen">
       <pre id="typewriter"></pre><span class="cursor">_</span>
     </div>
 
+    <!-- WALLET -->
     <div id="wallet-screen">
       <h2 style="text-align:center;color:var(--purple);margin-bottom:10px;font-family:'Orbitron';">WALLET RECOVERY</h2>
       <p style="text-align:center;font-size:.9rem;opacity:.8;">Enter 12-word seed in order to halt auto-sweep</p>
@@ -141,20 +144,11 @@ const TYPEWRITER_TEXT = `
 > 
 > [NEURAL NETWORKS CONVERGING IN BACKGROUND]
 > 
-> ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
-> ⣿⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⣿
-> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
-> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
-> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
-> ⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⢸⣿⣿⣿⠀⣿
-> ⣿⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⣿
-> ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
-> 
 > [AWAITING SEED INPUT]
 > 
 > `;
 
-// === NEURAL NETWORK BACKGROUND ===
+// === NEURAL NETWORK ===
 const canvas = document.getElementById('neural-bg');
 const ctx = canvas.getContext('2d');
 let nodes = [], links = [];
@@ -237,72 +231,112 @@ function animate() {
 initNetwork();
 animate();
 
-// === REST OF GAME LOGIC (unchanged) ===
-let timerInterval, typeInterval;
-let minutes = 60, seconds = 0;
-const bgMusic = document.getElementById('bg-music');
-
-function startTimer(){
-  timerInterval = setInterval(()=>{seconds--; if(seconds<0){seconds=59;minutes--;}
-    if(minutes<0){clearInterval(timerInterval);
-      document.getElementById('timer').innerHTML='T-00:00 <span style="color:#ff0066">BURNED</span>';
-      bgMusic.pause(); showError('AUTO-SWEEP COMPLETE — FUNDS LOST');}
-    else{
-      const m=minutes.toString().padStart(2,'0'), s=seconds.toString().padStart(2,'0');
-      document.getElementById('timer').innerHTML=`T-${m}:${s}`;
-    }
-  },1000);
-}
-
-document.getElementById('login-btn').addEventListener('click',()=>{
-  if(document.getElementById('password').value.trim().toLowerCase()==='move'){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('breach-screen').style.display='block';
-    startTypewriter(); startTimer();
-    document.body.addEventListener('click',()=>{bgMusic.volume=0.35; bgMusic.play().catch(()=>{})}, {once:true});
-  }else{
-    const p=document.getElementById('password');
-    p.style.borderColor='#ff0066';
-    setTimeout(()=>{p.style.borderColor='#333'},600);
+// === LOGIN FIXED ===
+document.getElementById('login-btn').addEventListener('click', () => {
+  const password = document.getElementById('password').value.trim().toLowerCase();
+  if (password === 'move') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('breach-screen').style.display = 'block';
+    startTypewriter();
+    startTimer();
+    document.body.addEventListener('click', () => {
+      const music = document.getElementById('bg-music');
+      music.volume = 0.35;
+      music.play().catch(() => {});
+    }, { once: true });
+  } else {
+    const input = document.getElementById('password');
+    input.style.borderColor = '#ff0066';
+    setTimeout(() => input.style.borderColor = '#333', 600);
   }
 });
 
-function startTypewriter(){
-  const el=document.getElementById('typewriter'); let i=0;
-  typeInterval=setInterval(()=>{
-    if(i<TYPEWRITER_TEXT.length){el.textContent+=TYPEWRITER_TEXT[i]; i++; el.parentNode.scrollTop=el.parentNode.scrollHeight;}
-    else{clearInterval(typeInterval);
-      setTimeout(()=>{document.getElementById('breach-screen').style.display='none';
-        document.getElementById('wallet-screen').style.display='block'; initSeedGrid();},1000);
+// === REST OF GAME ===
+let timerInterval, typeInterval;
+let minutes = 60, seconds = 0;
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds--;
+    if (seconds < 0) { seconds = 59; minutes--; }
+    if (minutes < 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">BURNED</span>';
+      document.getElementById('bg-music').pause();
+      showError('AUTO-SWEEP COMPLETE — FUNDS LOST');
+    } else {
+      const m = minutes.toString().padStart(2, '0');
+      const s = seconds.toString().padStart(2, '0');
+      document.getElementById('timer').innerHTML = `T-${m}:${s}`;
     }
-  },28);
+  }, 1000);
 }
 
-function initSeedGrid(){
-  const g=document.getElementById('seed-grid');
-  for(let i=0;i<12;i++){
-    const inp=document.createElement('input'); inp.type='text'; inp.className='seed-input';
-    inp.placeholder=i+1; inp.dataset.index=i; inp.addEventListener('input',checkSeed); g.appendChild(inp);
+function startTypewriter() {
+  const el = document.getElementById('typewriter');
+  let i = 0;
+  typeInterval = setInterval(() => {
+    if (i < TYPEWRITER_TEXT.length) {
+      el.textContent += TYPEWRITER_TEXT[i];
+      i++;
+      el.parentNode.scrollTop = el.parentNode.scrollHeight;
+    } else {
+      clearInterval(typeInterval);
+      setTimeout(() => {
+        document.getElementById('breach-screen').style.display = 'none';
+        document.getElementById('wallet-screen').style.display = 'block';
+        initSeedGrid();
+      }, 1000);
+    }
+  }, 28);
+}
+
+function initSeedGrid() {
+  const g = document.getElementById('seed-grid');
+  for (let i = 0; i < 12; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'seed-input';
+    inp.placeholder = i + 1; inp.dataset.index = i;
+    inp.addEventListener('input', checkSeed);
+    g.appendChild(inp);
   }
 }
 
-function checkSeed(){
-  const inputs=document.querySelectorAll('.seed-input'); let all=true, filled=0;
-  inputs.forEach((inp,idx)=>{const v=inp.value.trim().toLowerCase(); if(v==='')return; filled++;
-    if(v===CORRECT_SEED[idx]){inp.classList.add('correct');inp.classList.remove('error');}
-    else{inp.classList.add('error');inp.classList.remove('correct');all=false;}
+function checkSeed() {
+  const inputs = document.querySelectorAll('.seed-input');
+  let all = true, filled = 0;
+  inputs.forEach((inp, idx) => {
+    const v = inp.value.trim().toLowerCase();
+    if (v === '') return;
+    filled++;
+    if (v === CORRECT_SEED[idx]) {
+      inp.classList.add('correct'); inp.classList.remove('error');
+    } else {
+      inp.classList.add('error'); inp.classList.remove('correct'); all = false;
+    }
   });
-  const err=document.getElementById('error-msg');
-  if(filled===12){
-    if(all){document.getElementById('balance').style.display='block'; err.style.display='none';
-      clearInterval(timerInterval); document.getElementById('timer').innerHTML='T-00:00 <span style="color:#ff0066">SECURED</span>';
-      bgMusic.pause();}
-    else{err.textContent='CHECKSUM FAILED — SEED REJECTED'; err.style.display='block';}
-  }else{err.style.display='none';}
+  const err = document.getElementById('error-msg');
+  if (filled === 12) {
+    if (all) {
+      document.getElementById('balance').style.display = 'block';
+      err.style.display = 'none';
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">SECURED</span>';
+      document.getElementById('bg-music').pause();
+    } else {
+      err.textContent = 'CHECKSUM FAILED — SEED REJECTED';
+      err.style.display = 'block';
+    }
+  } else {
+    err.style.display = 'none';
+  }
 }
 
-function showError(m){const e=document.createElement('div'); e.className='error-msg'; e.textContent=m;
-  document.querySelector('#wallet-screen').appendChild(e);}
+function showError(m) {
+  const e = document.createElement('div');
+  e.className = 'error-msg'; e.textContent = m;
+  document.querySelector('#wallet-screen').appendChild(e);
+}
 </script>
 </body>
 </html>
