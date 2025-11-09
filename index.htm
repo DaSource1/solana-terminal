@@ -476,6 +476,88 @@ function showError(msg) {
 </script>
 </body>
 </html>
+// === NEURAL NETWORK BACKGROUND ===
+const canvas = document.getElementById('neural-bg');
+const ctx = canvas.getContext('2d');
+let nodes = [], links = [];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Node {
+  constructor() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.radius = 2 + Math.random() * 2;
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+    if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    this.pulse += 0.05;
+  }
+  draw() {
+    const pulse = Math.sin(this.pulse) * 0.5 + 1.5;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 51, 102, ${0.6 + Math.sin(this.pulse) * 0.2})`;
+    ctx.fill();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ff0033';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function initNetwork() {
+  nodes = []; links = [];
+  const count = Math.floor(canvas.width / 40);
+  for (let i = 0; i < count; i++) nodes.push(new Node());
+  connectNodes();
+}
+
+function connectNodes() {
+  links = [];
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const d = dist(nodes[i], nodes[j]);
+      if (d < 180) {
+        links.push({ a: nodes[i], b: nodes[j], strength: 1 - d / 180 });
+      }
+    }
+  }
+}
+
+function dist(a, b) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function animate() {
+  ctx.fillStyle = 'rgba(10,10,10,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  nodes.forEach(n => n.update());
+  connectNodes();
+  links.forEach(l => {
+    ctx.beginPath();
+    ctx.moveTo(l.a.x, l.a.y);
+    ctx.lineTo(l.b.x, l.b.y);
+    ctx.strokeStyle = `rgba(170,0,255,${l.strength * 0.3})`;
+    ctx.lineWidth = l.strength * 1.5;
+    ctx.stroke();
+  });
+  nodes.forEach(n => n.draw());
+  requestAnimationFrame(animate);
+}
+initNetwork();
+animate();
 
 
 
