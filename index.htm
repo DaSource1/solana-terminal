@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Roboto+Mono:wght@300;700&display=swap');
   :root{
     --bg:#0a0a0a;--red:#ff0033;--purple:#aa00ff;--text:#e0e0e0;--dark:#111;
-    --glitch1:#00ffff;--glitch2:#ff00ff;
+    --glitch1:#00ffff;--glitch2:#ff00ff;--error:#ff3366;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
@@ -82,6 +82,8 @@
   #typewriter{white-space:pre-wrap;position:relative}
   .cursor{animation:blink .8s infinite}
   @keyframes blink{50%{opacity:0}}
+  .error-line{color:var(--error);animation:shake .3s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
   #wallet-screen{display:none}
   .seed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0}
   @media(max-width:600px){.seed-grid{grid-template-columns:1fr 1fr}}
@@ -214,28 +216,88 @@
 
 <script>
 const CORRECT_SEED = ["abandon","cabbage","able","zoo","dawn","gadget","honey","twelve","icon","jazz","kite","leopard"];
-const TYPEWRITER_TEXT = `
-[BREACH PROTOCOL ENGAGED]
-> Connecting to Solana RPC... OK
-> Spoofing validator node... OK
-> Injecting ghost keypair... OK
-> Scanning mempool for seed traces... 6/12 DETECTED
-> 
-> [NEURAL CORE ACTIVATED]
-> 
-> ┌────────────────────────────────────────────────┐
-> │  PHANTOM WALLET — RECOVERY MODE ACTIVATED      │
-> └────────────────────────────────────────────────┘
-> 
-> Enter seed phrase to override burn sequence.
-> 
-> [NEURAL NETWORKS CONVERGING IN BACKGROUND]
-> 
-> [AWAITING SEED INPUT]
-> 
-> `;
 
-// === NEURAL NETWORK ===
+// === EXPANDED HACKER TYPEWRITER WITH ERRORS & RETRIES ===
+const TYPEWRITER_SCRIPT = [
+  { text: "[BREACH PROTOCOL INITIATED]\n", delay: 30 },
+  { text: "> Resolving Solana RPC endpoint... ", delay: 40 },
+  { text: "OK\n", delay: 20 },
+  { text: "> Establishing ghost tunnel... ", delay: 40 },
+  { text: "OK\n", delay: 20 },
+  { text: "> Spoofing validator identity... ", delay: 40 },
+  { text: "OK\n", delay: 20 },
+  { text: "> Injecting phantom keypair... ", delay: 40 },
+  { text: "OK\n", delay: 20 },
+  { text: "\n[NEURAL CORE SYNCHRONIZING]\n", delay: 30 },
+  { text: "> Scanning mempool for seed fragments... ", delay: 50 },
+  { text: "6/12 DETECTED\n", delay: 20 },
+  { text: "> Attempting checksum reconstruction... ", delay: 50 },
+  { text: "FAILED\n", error: true, delay: 30 },
+  { text: "> Retrying with quantum backoff... ", delay: 50 },
+  { text: "OK\n", delay: 20 },
+  { text: "> Reconstructing missing words... ", delay: 50 },
+  { text: "PARTIAL SUCCESS\n", delay: 20 },
+  { text: "\n[WARNING] Auto-sweep sequence armed\n", delay: 30 },
+  { text: "> T-60:00 until irreversible burn\n", delay: 30 },
+  { text: "\n┌────────────────────────────────────────────────┐\n", delay: 15 },
+  { text: "│  PHANTOM WALLET — EMERGENCY RECOVERY MODE      │\n", delay: 15 },
+  { text: "└────────────────────────────────────────────────┘\n", delay: 15 },
+  { text: "\n[SYSTEM PROMPT]\n", delay: 30 },
+  { text: "Enter 12-word seed phrase to override burn sequence.\n", delay: 30 },
+  { text: "\n[NEURAL NETWORKS CONVERGING]\n", delay: 30 },
+  { text: "\n[GLITCH DETECTED — STABILIZING]\n", delay: 30 },
+  { text: "\n[AWAITING SEED INPUT]\n", delay: 30 },
+  { text: "\n> ", delay: 30 }
+];
+
+let glitchInterval;
+let currentLine = 0;
+let charIndex = 0;
+let isTyping = false;
+
+function startGlitchTypewriter() {
+  const el = document.getElementById('typewriter');
+  el.textContent = '';
+  currentLine = 0;
+  charIndex = 0;
+  isTyping = true;
+
+  function typeNext() {
+    if (!isTyping) return;
+    if (currentLine >= TYPEWRITER_SCRIPT.length) {
+      setTimeout(() => {
+        document.getElementById('breach-screen').style.display = 'none';
+        document.getElementById('wallet-screen').style.display = 'block';
+        initSeedGrid();
+      }, 1000);
+      return;
+    }
+
+    const line = TYPEWRITER_SCRIPT[currentLine];
+    if (charIndex < line.text.length) {
+      const char = Math.random() < 0.97 ? line.text[charIndex] : String.fromCharCode(33 + Math.floor(Math.random() * 94));
+      el.textContent += char;
+      charIndex++;
+      el.parentNode.scrollTop = el.parentNode.scrollHeight;
+      setTimeout(typeNext, line.delay);
+    } else {
+      if (line.error) {
+        const lastLine = el.textContent.split('\n').pop();
+        const errorSpan = document.createElement('span');
+        errorSpan.className = 'error-line';
+        errorSpan.textContent = lastLine;
+        el.innerHTML = el.innerHTML.replace(lastLine, '');
+        el.appendChild(errorSpan);
+      }
+      charIndex = 0;
+      currentLine++;
+      setTimeout(typeNext, 200);
+    }
+  }
+  typeNext();
+}
+
+// === NEURAL NETWORK (unchanged) ===
 const canvas = document.getElementById('neural-bg');
 const ctx = canvas.getContext('2d');
 let nodes = [], links = [];
@@ -318,31 +380,7 @@ function animate() {
 initNetwork();
 animate();
 
-// === GLITCH TYPEWRITER EFFECT ===
-let glitchInterval;
-function startGlitchTypewriter() {
-  const el = document.getElementById('typewriter');
-  let i = 0;
-  clearInterval(glitchInterval);
-  glitchInterval = setInterval(() => {
-    if (i < TYPEWRITER_TEXT.length) {
-      // Random glitch on some characters
-      const char = Math.random() < 0.98 ? TYPEWRITER_TEXT[i] : String.fromCharCode(33 + Math.floor(Math.random() * 94));
-      el.textContent += char;
-      i++;
-      el.parentNode.scrollTop = el.parentNode.scrollHeight;
-    } else {
-      clearInterval(glitchInterval);
-      setTimeout(() => {
-        document.getElementById('breach-screen').style.display = 'none';
-        document.getElementById('wallet-screen').style.display = 'block';
-        initSeedGrid();
-      }, 1000);
-    }
-  }, 28);
-}
-
-// === LOGIN (NEW PASSWORD) ===
+// === LOGIN (moonlightfairyteller) ===
 document.getElementById('login-btn').addEventListener('click', () => {
   const password = document.getElementById('password').value.trim().toLowerCase();
   if (password === 'moonlightfairyteller') {
@@ -363,7 +401,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
   }
 });
 
-// === TIMER & SEED LOGIC (unchanged) ===
+// === TIMER & SEED LOGIC ===
 let timerInterval;
 let minutes = 60, seconds = 0;
 
