@@ -39,9 +39,7 @@
     align-items:center;font-family:'Orbitron',sans-serif;font-weight:900;letter-spacing:2px;
   }
   .title{color:var(--red);text-shadow:0 0 10px var(--red);font-size:1.1rem;position:relative}
-  .title.glitch{
-    animation:glitchTitle 2s infinite;
-  }
+  .title.glitch{animation:glitchTitle 2s infinite}
   @keyframes glitchTitle{
     0%,100%{text-shadow:0 0 10px var(--red)}
     2%{text-shadow:2px 0 var(--glitch1),-2px 0 var(--glitch2)}
@@ -54,7 +52,7 @@
   #login-screen{text-align:center}
   .logo{
     width:80px;height:80px;margin:0 auto 20px;background:var(--red);
-    clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);
+    clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38);
     animation:spin 20s linear infinite;box-shadow:0 0 20px var(--red);
   }
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -68,7 +66,7 @@
     padding:14px 16px;border-radius:8px;font-family:inherit;transition:.3s;
   }
   input:focus{
-    outline:none;border-color:var(--red);box-shadow:0 0 15px rgba(255,0,51,.3);
+    outline:none;border-color:var(--purple);box-shadow:0 0 10px rgba(170,0,255,.3);
   }
   button{
     width:100%;background:linear-gradient(45deg,var(--red),#ff3366);color:#000;
@@ -93,20 +91,20 @@
     text-align:center;border-radius:6px;font-family:inherit;transition:.3s;font-size:1rem;
   }
   .seed-input:focus{
-    border-color:var(--purple);box-shadow:0 0 10px rgba(170,0,255,.3);
+    border-color:var(--purple);box-shadow:0 0 10px rgba(170,0,255,.3);transform:scale(1.05);
   }
   .seed-input.correct{
-    border-color:var(--red);background:rgba(255,0,51,.1);color:var(--red);animation:success .5s;
+    border-color:var(--success);background:rgba(0,255,157,.1);color:var(--success);animation:success .5s;
   }
   .seed-input.error{
-    border-color:#ff0066;animation:errorShake .4s;background:rgba(255,0,102,.1);
+    border-color:var(--error);animation:errorShake .4s;background:rgba(255,51,102,.1);
   }
-  @keyframes success{0%{transform:scale(.9)}100%{transform:scale(1)}}
+  @keyframes success{0%{transform:scale(1.1)}100%{transform:scale(1)}}
   @keyframes errorShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
   .balance{text-align:center;margin-top:40px;font-size:1.8rem;font-weight:bold}
   .sol{color:var(--red);text-shadow:0 0 10px var(--red)}
   .usd{color:var(--purple);font-size:1.2rem;margin-top:8px}
-  .error-msg{color:#ff3366;text-align:center;margin-top:15px;font-weight:bold;animation:fadeIn .5s}
+  .error-msg{color:var(--error);text-align:center;margin-top:15px;font-weight:bold;animation:fadeIn .5s}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   /* GLITCH OVERLAYS */
   .glitch-overlay{
@@ -133,8 +131,7 @@
     94%,100%{width:0}
   }
 </style>
-</head>
-<body>
+</body>
 
 <canvas id="neural-bg"></canvas>
 <div class="glitch-overlay"></div>
@@ -201,7 +198,7 @@
     <!-- WALLET -->
     <div id="wallet-screen">
       <h2 style="text-align:center;color:var(--purple);margin-bottom:10px;font-family:'Orbitron';">WALLET RECOVERY</h2>
-      <p style="text-align:center;font-size:.9rem;opacity:.8;">Type seed words → press <strong>SPACE</strong> to go to next</p>
+      <p style="text-align:center;font-size:.9rem;opacity:.8;">Type seed words → press <strong>SPACE</strong> to go to next (or Tab/Enter to submit all)</p>
 
       <div class="seed-grid" id="seed-grid"></div>
       <div id="error-msg" class="error-msg" style="display:none;"></div>
@@ -267,7 +264,6 @@ const TYPEWRITER_SCRIPT = [
   { text: "\n> ", delay: 30 }
 ];
 
-let glitchInterval;
 let currentLine = 0;
 let charIndex = 0;
 let isTyping = false;
@@ -404,7 +400,7 @@ function animate() {
 initNetwork();
 animate();
 
-// === LOGIN (moonlightfairyteller) ===
+// === LOGIN ===
 document.getElementById('login-btn').addEventListener('click', () => {
   const password = document.getElementById('password').value.trim().toLowerCase();
   if (password === 'moonlightfairyteller') {
@@ -425,7 +421,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
   }
 });
 
-// === TIMER & SEED LOGIC ===
+// === TIMER ===
 let timerInterval;
 let minutes = 60, seconds = 0;
 
@@ -446,6 +442,7 @@ function startTimer() {
   }, 1000);
 }
 
+// === SEED GRID WITH SPACEBAR NAV ===
 let seedInputs = [];
 
 function initSeedGrid() {
@@ -464,25 +461,53 @@ function initSeedGrid() {
     seedInputs.push(inp);
   }
 
-  // === SPACEBAR NAVIGATION ===
-  let currentIndex = 0;
   seedInputs[0].focus();
 
+  // === FIXED SPACEBAR + KEYBOARD NAV ===
   document.addEventListener('keydown', (e) => {
-    if (e.key === ' ' && document.activeElement.classList.contains('seed-input')) {
-      e.preventDefault();
-      const word = document.activeElement.value.trim().toLowerCase();
+    if (!document.activeElement || !document.activeElement.classList.contains('seed-input')) return;
+
+    const currentInput = document.activeElement;
+    const currentIdx = parseInt(currentInput.dataset.index);
+    const word = currentInput.value.trim().toLowerCase();
+
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault(); // Stop scrolling/default
+      e.stopPropagation(); // Stop bubbling
+
       if (word) {
-        currentIndex = parseInt(document.activeElement.dataset.index) + 1;
-        if (currentIndex < 12) {
-          seedInputs[currentIndex].focus();
+        // Move to next
+        const nextIdx = currentIdx + 1;
+        if (nextIdx < 12) {
+          seedInputs[nextIdx].focus();
+          seedInputs[nextIdx].select(); // Select all for overwrite
         } else {
-          checkSeed();
+          checkSeed(); // Submit if last
+        }
+      } else {
+        // If empty, just move
+        const nextIdx = currentIdx + 1;
+        if (nextIdx < 12) {
+          seedInputs[nextIdx].focus();
         }
       }
+    } else if (e.key === 'Backspace') {
+      if (currentInput.value === '' && currentIdx > 0) {
+        // Go to previous if empty
+        seedInputs[currentIdx - 1].focus();
+        seedInputs[currentIdx - 1].setSelectionRange(0, 999); // Select all
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      checkSeed(); // Submit all
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const nextIdx = (currentIdx + 1) % 12;
+      seedInputs[nextIdx].focus();
     }
   });
 
+  // Real-time validation on input
   seedInputs.forEach(inp => {
     inp.addEventListener('input', () => {
       const v = inp.value.trim().toLowerCase();
@@ -534,6 +559,77 @@ function showError(m) {
   e.className = 'error-msg'; e.textContent = m;
   document.querySelector('#wallet-screen').appendChild(e);
 }
+
+// === GLITCH TYPEWRITER (unchanged from previous) ===
+function startGlitchTypewriter() {
+  const el = document.getElementById('typewriter');
+  el.textContent = '';
+  currentLine = 0;
+  charIndex = 0;
+  isTyping = true;
+
+  function typeNext() {
+    if (!isTyping) return;
+    if (currentLine >= TYPEWRITER_SCRIPT.length) {
+      setTimeout(() => {
+        document.getElementById('breach-screen').style.display = 'none';
+        document.getElementById('wallet-screen').style.display = 'block';
+        initSeedGrid();
+      }, 1000);
+      return;
+    }
+
+    const line = TYPEWRITER_SCRIPT[currentLine];
+    if (charIndex < line.text.length) {
+      const char = Math.random() < 0.97 ? line.text[charIndex] : String.fromCharCode(33 + Math.floor(Math.random() * 94));
+      el.textContent += char;
+      charIndex++;
+      el.parentNode.scrollTop = el.parentNode.scrollHeight;
+      setTimeout(typeNext, line.delay);
+    } else {
+      if (line.error) {
+        const lastLine = el.textContent.split('\n').pop();
+        const errorSpan = document.createElement('span');
+        errorSpan.className = 'error-line';
+        errorSpan.textContent = lastLine;
+        el.innerHTML = el.innerHTML.slice(0, -lastLine.length);
+        el.appendChild(errorSpan);
+      } else if (line.success) {
+        const lastLine = el.textContent.split('\n').pop();
+        const successSpan = document.createElement('span');
+        successSpan.className = 'success-line';
+        successSpan.textContent = lastLine;
+        el.innerHTML = el.innerHTML.slice(0, -lastLine.length);
+        el.appendChild(successSpan);
+      }
+      charIndex = 0;
+      currentLine++;
+      setTimeout(typeNext, 200);
+    }
+  }
+  typeNext();
+}
+
+// === LOGIN ===
+document.getElementById('login-btn').addEventListener('click', () => {
+  const password = document.getElementById('password').value.trim().toLowerCase();
+  if (password === 'moonlightfairyteller') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('breach-screen').style.display = 'block';
+    startGlitchTypewriter();
+    startTimer();
+    document.body.addEventListener('click', () => {
+      const music = document.getElementById('bg-music');
+      music.volume = 0.35;
+      music.play().catch(() => {});
+    }, { once: true });
+  } else {
+    const input = document.getElementById('password');
+    input.style.borderColor = '#ff0066';
+    input.value = '';
+    setTimeout(() => input.style.borderColor = '#333', 600);
+  }
+});
 </script>
 </body>
 </html>
