@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SOLANA RECOVERY TERMINAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+    :root {
+      --bg: #000;
+      --text: #0f0;
+      --accent: #0f9;
+      --error: #f33;
+      --glitch: #0ff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'VT323', monospace;
+      overflow: hidden;
+      height: 100vh;
+      position: relative;
+    }
+
+    canvas { position: absolute; top:0; left:0; z-index:1; opacity:0.15; }
+
+    .terminal {
+      position: relative;
+      z-index: 10;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid var(--text);
+      border-radius: 4px;
+      box-shadow: 0 0 20px var(--text), inset 0 0 10px rgba(0,255,0,0.2);
+      animation: flicker 3s infinite alternate;
+    }
+    @keyframes flicker { 0%,100% { opacity:1; } 50% { opacity:0.97; } }
+
+    h1 {
+      text-align: center;
+      font-size: 2.2rem;
+      letter-spacing: 3px;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 5px var(--glitch);
+      animation: glitch 2s infinite;
+    }
+    @keyframes glitch {
+      0% { text-shadow: 2px 0 #f00, -2px 0 #0ff; }
+      10% { text-shadow: -2px 0 #f00, 2px 0 #0ff; }
+      20% { text-shadow: 0 0 10px var(--glitch); }
+      100% { text-shadow: 0 0 5px var(--glitch); }
+    }
+
+    #timer {
+      text-align: center;
+      font-size: 2.5rem;
+      margin: 1rem 0;
+      color: #0f9;
+      text-shadow: 0 0 10px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+    .seed-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+      margin: 1.5rem 0;
+      z-index: 20;
+    }
+    .seed-input {
+      background: #000;
+      border: 1px solid #0a0;
+      color: var(--text);
+      font-family: 'VT323', monospace;
+      font-size: 1.1rem;
+      padding: 0.5rem;
+      text-align: center;
+      caret-color: var(--accent);
+      transition: all 0.2s;
+      z-index: 30;
+    }
+    .seed-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      background: #001a00;
+    }
+    .seed-input.correct { border-color: #0f0; background: #002200; box-shadow: 0 0 12px #0f0; }
+    .seed-input.wrong   { border-color: var(--error); background: #200000; box-shadow: 0 0 12px var(--error); animation: shake 0.3s; }
+    @keyframes shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-4px); } 75% { transform:translateX(4px); } }
+
+    #message {
+      text-align: center;
+      min-height: 1.5rem;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+    }
+
+    #result {
+      display: none;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    #balance {
+      font-size: 2rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px;
+    }
+    .sol { color: #0f9; }
+    .usd { color: #99f; }
+
+    body::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
+      pointer-events: none;
+      z-index: 5;
+      animation: crt 0.1s infinite;
+    }
+    @keyframes crt { 0% { opacity: 0.8; } 100% { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <canvas id="matrix"></canvas>
+
+  <div class="terminal">
+    <h1>» SOLANA RECOVERY TERMINAL «</h1>
+    <div id="timer">60:00</div>
+
+    <div class="seed-grid" id="grid"></div>
+
+    <div id="message"></div>
+
+    <div id="result">
+      <div id="balance">
+        <span class="sol">10,000.00</span> SOL<br>
+        <span class="usd" id="usdValue">—</span>
+      </div>
+      <div style="margin-top:1rem; font-size:1.2rem; color:#0f9;">
+        WALLET RESTORED // FUNDS SECURE
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CORRECT = ["abandon","cabbage","able","zoo","dawn","gadget","honey","twelve","icon","jazz","kite","leopard"];
+    const TOTAL_SECONDS = 60 * 60;
+    const grid = document.getElementById('grid');
+    const timerEl = document.getElementById('timer');
+    const msg = document.getElementById('message');
+    const result = document.getElementById('result');
+    const usdEl = document.getElementById('usdValue');
+    const inputs = [];
+
+    // CREATE 12 INPUTS
+    for (let i = 0; i < 12; i++) {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'seed-input';
+      inp.dataset.idx = i;
+      inp.autocomplete = 'off';
+      inp.spellcheck = false;
+      inp.maxLength = 20;
+      grid.appendChild(inp);
+      inputs.push(inp);
+
+      // Only move on SPACE or ENTER
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (i < 11) inputs[i+1].focus();
+        } else if (e.key === 'Backspace' && !inp.value && i > 0) {
+          e.preventDefault();
+          inputs[i-1].focus();
+        }
+      });
+
+      inp.addEventListener('input', () => {
+        let val = inp.value.trim().toLowerCase();
+        inp.value = val;
+        validate();
+      });
+    }
+
+    // TIMER
+    let end = Date.now() + TOTAL_SECONDS * 1000;
+    function updateTimer() {
+      const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+      const m = String(Math.floor(left / 60)).padStart(2,'0');
+      const s = String(left % 60).padStart(2,'0');
+      timerEl.textContent = `${m}:${s}`;
+      if (left <= 0) {
+        msg.textContent = '>> FUNDS BURNED. TERMINAL LOCKED.';
+        msg.style.color = 'var(--error)';
+        inputs.forEach(i => i.disabled = true);
+      } else {
+        requestAnimationFrame(updateTimer);
+      }
+    }
+    updateTimer();
+
+    // VALIDATE
+    function validate() {
+      let filled = 0, correct = true;
+      inputs.forEach((inp, i) => {
+        const val = inp.value.trim().toLowerCase();
+        inp.classList.remove('correct','wrong');
+        if (!val) return;
+        filled++;
+        if (val === CORRECT[i]) {
+          inp.classList.add('correct');
+        } else {
+          inp.classList.add('wrong');
+          correct = false;
+        }
+      });
+
+      if (filled === 12) {
+        if (correct) unlock();
+        else {
+          msg.textContent = '>> INVALID SEED. ACCESS DENIED.';
+          msg.style.color = 'var(--error)';
+        }
+      } else {
+        msg.textContent = '';
+      }
+    }
+
+    // UNLOCK
+    async function unlock() {
+      inputs.forEach(i => i.disabled = true);
+      msg.textContent = '>> SEED ACCEPTED. RESTORING WALLET...';
+      msg.style.color = 'var(--accent)';
+
+      try {
+        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const d = await r.json();
+        const usd = (10000 * d.solana.usd).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        usdEl.textContent = `$${usd} USD`;
+      } catch {
+        usdEl.textContent = '(price error)';
+      }
+
+      result.style.display = 'block';
+    }
+
+    // MATRIX RAIN
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+    const fontSize = 14;
+    const cols = Math.floor(canvas.width / fontSize);
+    const drops = Array(cols).fill(1);
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#0f0';
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        ctx.fillText(text, x, y);
+        if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+    setInterval(draw, 35);
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
