@@ -1,264 +1,61 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Phantom Breach — Wallet Recovery</title>
+<title>Phantom Breach — Neural Core</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Roboto+Mono:wght@300;700&display=swap');
-
-  :root {
-    --bg: #0a0a0a;
-    --red: #ff0033;
-    --purple: #aa00ff;
-    --text: #e0e0e0;
-    --dark: #111;
-  }
-
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Roboto Mono', monospace;
-    overflow: hidden;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  /* SCANLINES */
-  body::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0,0,0,0.15),
-      rgba(0,0,0,0.15) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-    z-index: 999;
-    animation: scan 8s linear infinite;
-  }
-  @keyframes scan {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
-  }
-
-  /* GHOST ASCII — SUBTLE, DRIFTING */
-  #ghost-bg {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    pointer-events: none;
-    opacity: 0.05;
-    font-size: 1.1vw;
-    line-height: 1.05;
-    white-space: pre;
-    color: var(--red);
-    animation: ghostDrift 60s linear infinite;
-    filter: blur(0.5px);
-  }
-  @keyframes ghostDrift {
-    0%   { transform: translate(0,0) rotate(0deg); }
-    100% { transform: translate(-8vw, -8vh) rotate(1.5deg); }
-  }
-
-  /* TERMINAL */
-  .terminal {
-    width: 92vw; max-width: 960px;
-    border: 1px solid var(--red);
-    border-radius: 12px;
-    background: rgba(10,10,10,0.97);
-    box-shadow: 
-      0 0 40px rgba(255,0,51,0.4),
-      inset 0 0 20px rgba(0,0,0,0.8);
-    overflow: hidden;
-    position: relative;
-    backdrop-filter: blur(8px);
-  }
-
-  .header {
-    background: linear-gradient(180deg, #1a001a, #0f000f);
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--purple);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 900;
-    letter-spacing: 2px;
-  }
-  .title {
-    color: var(--red);
-    text-shadow: 0 0 10px var(--red);
-    font-size: 1.1rem;
-  }
-  .timer {
-    color: #ff3366;
-    font-size: 1.3rem;
-    font-weight: bold;
-    text-shadow: 0 0 8px var(--red);
-    animation: pulse 1.2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity:1; transform: scale(1); }
-    50% { opacity:0.7; transform: scale(1.02); }
-  }
-
-  .body { padding: 30px; }
-
-  /* LOGIN */
-  #login-screen {
-    text-align: center;
-  }
-  .logo {
-    width: 80px; height: 80px;
-    margin: 0 auto 20px;
-    background: var(--red);
-    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
-    animation: spin 20s linear infinite;
-    box-shadow: 0 0 20px var(--red);
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .input-group {
-    margin: 20px 0;
-    position: relative;
-  }
-  label {
-    position: absolute;
-    top: -10px; left: 16px;
-    background: var(--bg);
-    padding: 0 8px;
-    font-size: 0.8rem;
-    color: var(--purple);
-  }
-  input {
-    width: 100%;
-    background: var(--dark);
-    border: 1px solid var(--purple);
-    color: var(--text);
-    padding: 14px 16px;
-    border-radius: 8px;
-    font-family: inherit;
-    transition: 0.3s;
-  }
-  input:focus {
-    outline: none;
-    border-color: var(--red);
-    box-shadow: 0 0 15px rgba(255,0,51,0.3);
-  }
-  button {
-    width: 100%;
-    background: linear-gradient(45deg, var(--red), #ff3366);
-    color: #000;
-    border: none;
-    padding: 16px;
-    font-weight: bold;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 20px;
-    transition: 0.3s;
-    box-shadow: 0 4px 15px rgba(255,0,51,0.4);
-  }
-  button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255,0,51,0.6);
-  }
-
-  /* BREACH */
-  #breach-screen {
-    display: none;
-    color: var(--text);
-    height: 70vh;
-    overflow-y: auto;
-    font-family: 'Roboto Mono', monospace;
-    line-height: 1.6;
-  }
-  #typewriter {
-    white-space: pre-wrap;
-  }
-  .cursor {
-    animation: blink 0.8s infinite;
-  }
-  @keyframes blink { 50% { opacity:0; } }
-
-  /* WALLET */
-  #wallet-screen {
-    display: none;
-  }
-  .seed-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin: 30px 0;
-  }
-  @media (max-width: 600px) {
-    .seed-grid { grid-template-columns: 1fr 1fr; }
-  }
-  .seed-input {
-    background: var(--dark);
-    border: 1px solid #333;
-    color: var(--text);
-    padding: 12px;
-    text-align: center;
-    border-radius: 6px;
-    font-family: inherit;
-    transition: 0.3s;
-  }
-  .seed-input:focus {
-    border-color: var(--purple);
-    box-shadow: 0 0 10px rgba(170,0,255,0.3);
-  }
-  .seed-input.correct {
-    border-color: var(--red);
-    background: rgba(255,0,51,0.1);
-    color: var(--red);
-    animation: success 0.5s;
-  }
-  .seed-input.error {
-    border-color: #ff0066;
-    animation: errorShake 0.4s;
-    background: rgba(255,0,102,0.1);
-  }
-  @keyframes success { 0% { transform: scale(0.9); } 100% { transform: scale(1); } }
-  @keyframes errorShake {
-    0%,100% { transform:translateX(0); }
-    25% { transform:translateX(-6px); }
-    75% { transform:translateX(6px); }
-  }
-
-  .balance {
-    text-align: center;
-    margin-top: 40px;
-    font-size: 1.8rem;
-    font-weight: bold;
-  }
-  .sol { color: var(--red); text-shadow: 0 0 10px var(--red); }
-  .usd { color: var(--purple); font-size: 1.2rem; margin-top: 8px; }
-
-  .error-msg {
-    color: #ff3366;
-    text-align: center;
-    margin-top: 15px;
-    font-weight: bold;
-    animation: fadeIn 0.5s;
-  }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  :root{--bg:#0a0a0a;--red:#ff0033;--purple:#aa00ff;--text:#e0e0e0;--dark:#111;--node:#ff3366;--link:#aa00ff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Roboto Mono',monospace;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;position:relative}
+  canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;opacity:0.3}
+  body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.15),rgba(0,0,0,.15)1px,transparent 1px,transparent 2px);pointer-events:none;z-index:999;animation:scan 8s linear infinite}
+  @keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+  #ghost-bg{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;opacity:.03;font-size:1.1vw;line-height:1.05;white-space:pre;color:var(--red);animation:ghostDrift 60s linear infinite;filter:blur(.5px)}
+  @keyframes ghostDrift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(-8vw,-8vh) rotate(1.5deg)}}
+  .terminal{width:92vw;max-width:960px;border:1px solid var(--red);border-radius:12px;background:rgba(10,10,10,.97);box-shadow:0 0 40px rgba(255,0,51,.4),inset 0 0 20px rgba(0,0,0,.8);overflow:hidden;position:relative;backdrop-filter:blur(8px);z-index:10}
+  .header{background:linear-gradient(180deg,#1a001a,#0f000f);padding:14px 20px;border-bottom:1px solid var(--purple);display:flex;justify-content:space-between;align-items:center;font-family:'Orbitron',sans-serif;font-weight:900;letter-spacing:2px}
+  .title{color:var(--red);text-shadow:0 0 10px var(--red);font-size:1.1rem}
+  .timer{color:#ff3366;font-size:1.3rem;font-weight:bold;text-shadow:0 0 8px var(--red);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.02)}}
+  .body{padding:30px;position:relative}
+  #login-screen{text-align:center}
+  .logo{width:80px;height:80px;margin:0 auto 20px;background:var(--red);clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);animation:spin 20s linear infinite;box-shadow:0 0 20px var(--red)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .input-group{margin:20px 0;position:relative}
+  label{position:absolute;top:-10px;left:16px;background:var(--bg);padding:0 8px;font-size:.8rem;color:var(--purple)}
+  input{width:100%;background:var(--dark);border:1px solid var(--purple);color:var(--text);padding:14px 16px;border-radius:8px;font-family:inherit;transition:.3s}
+  input:focus{outline:none;border-color:var(--red);box-shadow:0 0 15px rgba(255,0,51,.3)}
+  button{width:100%;background:linear-gradient(45deg,var(--red),#ff3366);color:#000;border:none;padding:16px;font-weight:bold;font-size:1.1rem;border-radius:8px;cursor:pointer;margin-top:20px;transition:.3s;box-shadow:0 4px 15px rgba(255,0,51,.4)}
+  button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(255,0,51,.6)}
+  #breach-screen{display:none;color:var(--text);height:70vh;overflow-y:auto;font-family:'Roboto Mono',monospace;line-height:1.6}
+  #typewriter{white-space:pre-wrap}
+  .cursor{animation:blink .8s infinite}
+  @keyframes blink{50%{opacity:0}}
+  #wallet-screen{display:none}
+  .seed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0}
+  @media(max-width:600px){.seed-grid{grid-template-columns:1fr 1fr}}
+  .seed-input{background:var(--dark);border:1px solid #333;color:var(--text);padding:12px;text-align:center;border-radius:6px;font-family:inherit;transition:.3s}
+  .seed-input:focus{border-color:var(--purple);box-shadow:0 0 10px rgba(170,0,255,.3)}
+  .seed-input.correct{border-color:var(--red);background:rgba(255,0,51,.1);color:var(--red);animation:success .5s}
+  .seed-input.error{border-color:#ff0066;animation:errorShake .4s;background:rgba(255,0,102,.1)}
+  @keyframes success{0%{transform:scale(.9)}100%{transform:scale(1)}}
+  @keyframes errorShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .balance{text-align:center;margin-top:40px;font-size:1.8rem;font-weight:bold}
+  .sol{color:var(--red);text-shadow:0 0 10px var(--red)}
+  .usd{color:var(--purple);font-size:1.2rem;margin-top:8px}
+  .error-msg{color:#ff3366;text-align:center;margin-top:15px;font-weight:bold;animation:fadeIn .5s}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body>
 
-<!-- BACKGROUND MUSIC -->
+<canvas id="neural-bg"></canvas>
+
 <audio id="bg-music" loop preload="auto">
- <source src="https://raw.githubusercontent.com/DaSource1/solana-terminal/main/speed%20up%20or%20jeet%20up.mp3" type="audio/mpeg">
+  <source src="https://raw.githubusercontent.com/DaSource1/solana-terminal/main/speed%20up%20or%20jeet%20up.mp3" type="audio/mpeg">
 </audio>
 
-<!-- GHOST ASCII -->
 <pre id="ghost-bg">
                      .-.
                     /  (
@@ -291,10 +88,9 @@
 
   <div class="body">
 
-    <!-- LOGIN -->
     <div id="login-screen">
       <div class="logo"></div>
-      <h2 style="color:var(--red); margin-bottom:20px; font-family:'Orbitron';">SYSTEM COMPROMISED</h2>
+      <h2 style="color:var(--red);margin-bottom:20px;font-family:'Orbitron';">SYSTEM COMPROMISED</h2>
       <div class="input-group">
         <label>USERNAME</label>
         <input type="text" value="PhantomSol_7" readonly>
@@ -306,15 +102,13 @@
       <button id="login-btn">EXECUTE BREACH</button>
     </div>
 
-    <!-- BREACH -->
     <div id="breach-screen">
       <pre id="typewriter"></pre><span class="cursor">_</span>
     </div>
 
-    <!-- WALLET -->
     <div id="wallet-screen">
-      <h2 style="text-align:center; color:var(--purple); margin-bottom:10px; font-family:'Orbitron';">WALLET RECOVERY</h2>
-      <p style="text-align:center; font-size:0.9rem; opacity:0.8;">Enter 12-word seed in order to halt auto-sweep</p>
+      <h2 style="text-align:center;color:var(--purple);margin-bottom:10px;font-family:'Orbitron';">WALLET RECOVERY</h2>
+      <p style="text-align:center;font-size:.9rem;opacity:.8;">Enter 12-word seed in order to halt auto-sweep</p>
 
       <div class="seed-grid" id="seed-grid"></div>
       <div id="error-msg" class="error-msg" style="display:none;"></div>
@@ -337,7 +131,7 @@ const TYPEWRITER_TEXT = `
 > Injecting ghost keypair... OK
 > Scanning mempool for seed traces... 6/12 DETECTED
 > 
-> [AUTO-SWEEP IN PROGRESS]
+> [NEURAL CORE ACTIVATED]
 > 
 > ┌────────────────────────────────────────────────┐
 > │  PHANTOM WALLET — RECOVERY MODE ACTIVATED      │
@@ -345,7 +139,7 @@ const TYPEWRITER_TEXT = `
 > 
 > Enter seed phrase to override burn sequence.
 > 
-> [GHOST SIGNATURE DETECTED IN BACKGROUND]
+> [NEURAL NETWORKS CONVERGING IN BACKGROUND]
 > 
 > ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
 > ⣿⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⣿
@@ -360,122 +154,6 @@ const TYPEWRITER_TEXT = `
 > 
 > `;
 
-let timerInterval, typeInterval;
-let minutes = 60, seconds = 0;
-const bgMusic = document.getElementById('bg-music');
-
-function startTimer() {
-  timerInterval = setInterval(() => {
-    seconds--;
-    if (seconds < 0) { seconds = 59; minutes--; }
-    if (minutes < 0) {
-      clearInterval(timerInterval);
-      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">BURNED</span>';
-      bgMusic.pause();
-      showError('AUTO-SWEEP COMPLETE — FUNDS LOST TO BURN ADDRESS');
-    } else {
-      const m = minutes.toString().padStart(2,'0');
-      const s = seconds.toString().padStart(2,'0');
-      document.getElementById('timer').innerHTML = `T-${m}:${s}`;
-    }
-  }, 1000);
-}
-
-document.getElementById('login-btn').addEventListener('click', () => {
-  const pass = document.getElementById('password').value.trim().toLowerCase();
-  if (pass === 'fairytail') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('breach-screen').style.display = 'block';
-    startTypewriter();
-    startTimer();
-    document.body.addEventListener('click', () => {
-      bgMusic.play().catch(() => {});
-      bgMusic.volume = 0.35;
-    }, { once: true });
-  } else {
-    document.getElementById('password').style.borderColor = '#ff0066';
-    setTimeout(() => document.getElementById('password').style.borderColor = '#333', 600);
-  }
-});
-
-function startTypewriter() {
-  const el = document.getElementById('typewriter');
-  let i = 0;
-  typeInterval = setInterval(() => {
-    if (i < TYPEWRITER_TEXT.length) {
-      el.textContent += TYPEWRITER_TEXT[i];
-      i++;
-      el.parentNode.scrollTop = el.parentNode.scrollHeight;
-    } else {
-      clearInterval(typeInterval);
-      setTimeout(() => {
-        document.getElementById('breach-screen').style.display = 'none';
-        document.getElementById('wallet-screen').style.display = 'block';
-        initSeedGrid();
-      }, 1000);
-    }
-  }, 28);
-}
-
-function initSeedGrid() {
-  const grid = document.getElementById('seed-grid');
-  for (let i = 0; i < 12; i++) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'seed-input';
-    input.placeholder = `${i+1}`;
-    input.dataset.index = i;
-    input.addEventListener('input', checkSeed);
-    grid.appendChild(input);
-  }
-}
-
-function checkSeed() {
-  const inputs = document.querySelectorAll('.seed-input');
-  let allCorrect = true;
-  let filled = 0;
-
-  inputs.forEach((inp, idx) => {
-    const val = inp.value.trim().toLowerCase();
-    if (val === '') return;
-    filled++;
-
-    if (val === CORRECT_SEED[idx]) {
-      inp.classList.add('correct');
-      inp.classList.remove('error');
-    } else {
-      inp.classList.add('error');
-      inp.classList.remove('correct');
-      allCorrect = false;
-    }
-  });
-
-  const errorMsg = document.getElementById('error-msg');
-  if (filled === 12) {
-    if (allCorrect) {
-      document.getElementById('balance').style.display = 'block';
-      errorMsg.style.display = 'none';
-      clearInterval(timerInterval);
-      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">SECURED</span>';
-      bgMusic.pause();
-    } else {
-      errorMsg.textContent = 'CHECKSUM FAILED — SEED REJECTED';
-      errorMsg.style.display = 'block';
-    }
-  } else {
-    errorMsg.style.display = 'none';
-  }
-}
-
-function showError(msg) {
-  const err = document.createElement('div');
-  err.className = 'error-msg';
-  err.textContent = msg;
-  document.querySelector('#wallet-screen').appendChild(err);
-}
-</script>
-</body>
-</html>
 // === NEURAL NETWORK BACKGROUND ===
 const canvas = document.getElementById('neural-bg');
 const ctx = canvas.getContext('2d');
@@ -559,9 +237,72 @@ function animate() {
 initNetwork();
 animate();
 
+// === REST OF GAME LOGIC (unchanged) ===
+let timerInterval, typeInterval;
+let minutes = 60, seconds = 0;
+const bgMusic = document.getElementById('bg-music');
 
+function startTimer(){
+  timerInterval = setInterval(()=>{seconds--; if(seconds<0){seconds=59;minutes--;}
+    if(minutes<0){clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML='T-00:00 <span style="color:#ff0066">BURNED</span>';
+      bgMusic.pause(); showError('AUTO-SWEEP COMPLETE — FUNDS LOST');}
+    else{
+      const m=minutes.toString().padStart(2,'0'), s=seconds.toString().padStart(2,'0');
+      document.getElementById('timer').innerHTML=`T-${m}:${s}`;
+    }
+  },1000);
+}
 
+document.getElementById('login-btn').addEventListener('click',()=>{
+  if(document.getElementById('password').value.trim().toLowerCase()==='move'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('breach-screen').style.display='block';
+    startTypewriter(); startTimer();
+    document.body.addEventListener('click',()=>{bgMusic.volume=0.35; bgMusic.play().catch(()=>{})}, {once:true});
+  }else{
+    const p=document.getElementById('password');
+    p.style.borderColor='#ff0066';
+    setTimeout(()=>{p.style.borderColor='#333'},600);
+  }
+});
 
+function startTypewriter(){
+  const el=document.getElementById('typewriter'); let i=0;
+  typeInterval=setInterval(()=>{
+    if(i<TYPEWRITER_TEXT.length){el.textContent+=TYPEWRITER_TEXT[i]; i++; el.parentNode.scrollTop=el.parentNode.scrollHeight;}
+    else{clearInterval(typeInterval);
+      setTimeout(()=>{document.getElementById('breach-screen').style.display='none';
+        document.getElementById('wallet-screen').style.display='block'; initSeedGrid();},1000);
+    }
+  },28);
+}
 
+function initSeedGrid(){
+  const g=document.getElementById('seed-grid');
+  for(let i=0;i<12;i++){
+    const inp=document.createElement('input'); inp.type='text'; inp.className='seed-input';
+    inp.placeholder=i+1; inp.dataset.index=i; inp.addEventListener('input',checkSeed); g.appendChild(inp);
+  }
+}
 
+function checkSeed(){
+  const inputs=document.querySelectorAll('.seed-input'); let all=true, filled=0;
+  inputs.forEach((inp,idx)=>{const v=inp.value.trim().toLowerCase(); if(v==='')return; filled++;
+    if(v===CORRECT_SEED[idx]){inp.classList.add('correct');inp.classList.remove('error');}
+    else{inp.classList.add('error');inp.classList.remove('correct');all=false;}
+  });
+  const err=document.getElementById('error-msg');
+  if(filled===12){
+    if(all){document.getElementById('balance').style.display='block'; err.style.display='none';
+      clearInterval(timerInterval); document.getElementById('timer').innerHTML='T-00:00 <span style="color:#ff0066">SECURED</span>';
+      bgMusic.pause();}
+    else{err.textContent='CHECKSUM FAILED — SEED REJECTED'; err.style.display='block';}
+  }else{err.style.display='none';}
+}
 
+function showError(m){const e=document.createElement('div'); e.className='error-msg'; e.textContent=m;
+  document.querySelector('#wallet-screen').appendChild(e);}
+</script>
+</body>
+</html>
