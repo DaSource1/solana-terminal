@@ -167,6 +167,11 @@
                   \     /
                    |||||
                    |||||
+                  /     \
+                 |       |
+                  \     /
+                   |||||
+                   |||||
 </pre>
 
 <div class="terminal">
@@ -506,64 +511,4 @@ function initSeedGrid() {
         seedInputs[currentIdx - 1].setSelectionRange(0, 999);
       }
     } else if (e.key === 'Enter') {
-      e.preventDefault();
-      checkSeed();
-    }
-  });
-
-  seedInputs.forEach(inp => {
-    inp.addEventListener('input', () => {
-      const v = inp.value.trim().toLowerCase();
-      if (v === CORRECT_SEED[inp.dataset.index]) {
-        inp.classList.add('correct');
-        inp.classList.remove('error');
-      } else if (v) {
-        inp.classList.add('error');
-        inp.classList.remove('correct');
-      } else {
-        inp.classList.remove('correct', 'error');
-      }
-    });
-  });
-}
-
-function checkSeed() {
-  const inputs = seedInputs;
-  let all = true, filled = 0;
-  inputs.forEach((inp, idx) => {
-    const v = inp.value.trim().toLowerCase();
-    if (v === '') return;
-    filled++;
-    if (v === CORRECT_SEED[idx]) {
-      inp.classList.add('correct'); inp.classList.remove('error');
-    } else {
-      inp.classList.add('error'); inp.classList.remove('correct'); all = false;
-    }
-  });
-  const err = document.getElementById('error-msg');
-  if (filled === 12) {
-    if (all) {
-      document.getElementById('balance').style.display = 'block';
-      err.style.display = 'none';
-      clearInterval(timerInterval);
-      document.getElementById('timer').innerHTML = 'T-00:00 <span style="color:#ff0066">SECURED</span>';
-      document.getElementById('bg-music').pause();
-    } else {
-      err.textContent = 'CHECKSUM FAILED — SEED REJECTED';
-      err.style.display = 'block';
-    }
-  } else {
-    err.style.display = 'none';
-  }
-}
-
-function showError(m) {
-  const e = document.createElement('div');
-  e.className = 'error-msg'; e.textContent = m;
-  document.querySelector('#wallet-screen').appendChild(e);
-}
-</script>
-</body>
-</html>
-
-
+     
